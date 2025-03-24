@@ -1,11 +1,11 @@
-FROM oven/bun:1.0
+FROM oven/bun:1
 
 WORKDIR /app
 
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 RUN bun install
 
 COPY . .
 
-CMD ["bun", "index.ts"]
+CMD ["bun", "run", "index.ts"]
