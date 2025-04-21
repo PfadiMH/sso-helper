@@ -87,7 +87,7 @@ type GroupWithLevel = {
 type ConfigurationJson = {
   groups: GroupWithLevel[];
 };
-const configuration: ConfigurationJson = JSON.parse(configurationJson || "{}");
+const configuration: ConfigurationJson = JSON.parse(configurationJson);
 
 export function translateUserinfoData(
   userinfo: UpstreamUserinfoData
