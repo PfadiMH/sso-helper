@@ -29,9 +29,9 @@ app.use(express.json());
 app.use(
   auth({
     routes: {
-      callback: "/auth/callback",
-      login: "/auth/login",
-      logout: "/auth/logout",
+      callback: "/proxy-admin/callback",
+      login: "/proxy-admin/login",
+      logout: "/proxy-admin/logout",
       postLogoutRedirect: "https://pfadimh.ch",
     },
     authorizationParams: {
