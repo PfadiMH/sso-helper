@@ -6,7 +6,7 @@
 
 import cors from "cors";
 import express from "express";
-import { auth, claimIncludes } from "express-openid-connect";
+import { auth, requiresAuth } from "express-openid-connect";
 import {
   authorizeBaseUrl,
   finalAppRedirectUrl,
@@ -18,6 +18,7 @@ import { callback } from "./middleware/callback";
 import { errorHandler } from "./middleware/errorHandler";
 import { token } from "./middleware/token";
 import { userinfo } from "./middleware/userinfo";
+import { hasClaim } from "./utils/authUtils";
 
 // --- Express App Setup ---
 const app = express();
@@ -58,12 +59,17 @@ app.get("/userinfo", userinfo);
 app.use(errorHandler);
 
 // --- Admin Endpoints ---
-app.get("/proxy-admin", claimIncludes("roles", "Admin"), (req, res) => {
-  res.status(200).json({
-    message: "Admin access granted",
-    user: req.oidc.user,
-  });
-});
+app.get(
+  "/proxy-admin",
+  requiresAuth(),
+  hasClaim("roles", ["Admin"]),
+  (req, res) => {
+    res.status(200).json({
+      message: "Admin access granted",
+      user: req.oidc.user,
+    });
+  }
+);
 
 // --- Start Server ---
 app.listen(port, () => {
