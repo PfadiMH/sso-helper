@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Hierarchy Config</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 95%;
+            padding: 6px;
+        }
+
+        button {
+            padding: 8px 12px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+
+        .action-buttons {
+            white-space: nowrap;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .status-success {
+            color: green;
+        }
+
+        .status-error {
+            color: red;
+        }
+
+        /* Style for the template row (initially hidden) */
+        #group-template {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Hierarchy Configuration</h1>
+
+    <div id="status"></div>
+
+    <form id="config-form">
+        <table id="groups-table">
+            <thead>
+                <tr>
+                    <th>Group ID</th>
+                    <th>Roles (comma-separated)</th>
+                    <th>Profile Level</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="groups-tbody">
+                <% if (config && config.groups) { %>
+                    <% config.groups.forEach((group, index)=> { %>
+                        <tr class="group-row">
+                            <td>
+                                <!-- Make Group ID read-only if it shouldn't be changed -->
+                                <input type="number" class="group-id" value="<%= group.group_id %>" required readonly>
+                                <!-- Or editable: -->
+                                <!-- <input type="number" class="group-id" value="<%= group.group_id %>" required> -->
+                            </td>
+                            <td>
+                                <input type="text" class="group-roles" value="<%= group.roles.join(', ') %>">
+                            </td>
+                            <td>
+                                <select class="group-profile">
+                                    <option value="admin" <%=group.profile==='admin' ? 'selected' : '' %>>Admin</option>
+                                    <option value="leader" <%=group.profile==='leader' ? 'selected' : '' %>>Leader
+                                    </option>
+                                    <option value="member" <%=group.profile==='member' ? 'selected' : '' %>>Member
+                                    </option>
+                                    <option value="none" <%=group.profile==='none' ? 'selected' : '' %>>None</option>
+                                </select>
+                            </td>
+                            <td class="action-buttons">
+                                <button type="button" class="remove-group-btn">Remove</button>
+                            </td>
+                        </tr>
+                        <% }); %>
+                            <% } %>
+            </tbody>
+        </table>
+
+        <!-- Template row for adding new groups -->
+        <table style="display: none;">
+            <tr id="group-template" class="group-row">
+                <td>
+                    <!-- REMOVED 'required' FROM THIS TEMPLATE INPUT -->
+                    <input type="number" class="group-id" placeholder="Enter Group ID">
+                </td>
+                <td>
+                    <input type="text" class="group-roles" placeholder="e.g., role1, role2">
+                </td>
+                <td>
+                    <select class="group-profile">
+                        <option value="admin">Admin</option>
+                        <option value="leader">Leader</option>
+                        <option value="member" selected>Member</option> <!-- Default new groups to member -->
+                        <option value="none">None</option>
+                    </select>
+                </td>
+                <td class="action-buttons">
+                    <button type="button" class="remove-group-btn">Remove</button>
+                </td>
+            </tr>
+        </table>
+
+        <button type="button" id="add-group-btn">Add Group</button>
+        <button type="submit">Save Configuration</button>
+    </form>
+
+    <script>
+        const form = document.getElementById('config-form');
+        const groupsTableBody = document.getElementById('groups-tbody');
+        const addGroupButton = document.getElementById('add-group-btn');
+        const groupTemplate = document.getElementById('group-template');
+        const statusDiv = document.getElementById('status');
+
+        // --- Event Listener for Adding Groups ---
+        addGroupButton.addEventListener('click', () => {
+            const newRow = groupTemplate.cloneNode(true);
+            newRow.removeAttribute('id'); // Remove the ID from the clone
+            // Make Group ID input editable for new rows if it was readonly in the template
+            const idInput = newRow.querySelector('.group-id');
+            if (idInput.hasAttribute('readonly')) {
+                idInput.removeAttribute('readonly');
+            }
+            groupsTableBody.appendChild(newRow);
+        });
+
+        // --- Event Listener for Removing Groups (using event delegation) ---
+        groupsTableBody.addEventListener('click', (event) => {
+            if (event.target.classList.contains('remove-group-btn')) {
+                const rowToRemove = event.target.closest('tr'); // Find the parent row
+                if (rowToRemove) {
+                    rowToRemove.remove();
+                }
+            }
+        });
+
+        // --- Event Listener for Form Submission ---
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default HTML form submission
+            statusDiv.textContent = 'Saving...';
+            statusDiv.className = ''; // Clear previous status styles
+
+            const groupRows = groupsTableBody.querySelectorAll('tr.group-row');
+            const groupsData = [];
+            let isValid = true;
+
+            groupRows.forEach(row => {
+                const idInput = row.querySelector('.group-id');
+                const rolesInput = row.querySelector('.group-roles');
+                const profileSelect = row.querySelector('.group-profile');
+
+                const groupId = parseInt(idInput.value, 10);
+                const rolesString = rolesInput.value.trim();
+                const profile = profileSelect.value;
+
+                // Basic Validation
+                if (isNaN(groupId) || groupId <= 0) {
+                    alert(`Invalid Group ID in one of the rows: ${idInput.value}. Please enter a positive number.`);
+                    idInput.style.border = '1px solid red'; // Highlight error
+                    isValid = false;
+                    return; // Stop processing this row
+                } else {
+                    idInput.style.border = ''; // Clear error highlight
+                }
+
+                // Split roles, trim whitespace, filter out empty strings
+                const roles = rolesString === '' ? [] : rolesString.split(',').map(role => role.trim()).filter(role => role.length > 0);
+
+                groupsData.push({
+                    group_id: groupId,
+                    roles: roles,
+                    profile: profile
+                });
+            });
+
+            if (!isValid) {
+                statusDiv.textContent = 'Please fix the errors before saving.';
+                statusDiv.className = 'status-error';
+                return; // Stop submission if validation failed
+            }
+
+            const configPayload = {
+                groups: groupsData
+            };
+
+            try {
+                const response = await fetch('/proxy-admin/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json' // Important!
+                    },
+                    // Ensure your Express backend uses express.json() middleware
+                    // to parse this correctly into req.body
+                    body: JSON.stringify(configPayload)
+                });
+
+                if (response.ok) {
+                    const successMsg = await response.text();
+                    statusDiv.textContent = successMsg || 'Config saved successfully!';
+                    statusDiv.className = 'status-success';
+                    // Optional: Reload after a short delay to show fresh data
+                    // setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    const errorMsg = await response.text();
+                    console.error('Save failed:', response.status, errorMsg);
+                    statusDiv.textContent = `Error saving config: ${errorMsg || response.statusText}`;
+                    statusDiv.className = 'status-error';
+                }
+            } catch (error) {
+                console.error('Network or other error:', error);
+                statusDiv.textContent = `Error saving config: ${error.message}`;
+                statusDiv.className = 'status-error';
+            }
+        });
+    </script>
+
+</body>
+
+</html>

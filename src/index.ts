@@ -5,7 +5,7 @@
  */
 
 import cors from "cors";
-import express from "express";
+import express, { Request, RequestHandler, Response } from "express";
 import { auth, requiresAuth } from "express-openid-connect";
 import {
   authorizeBaseUrl,
@@ -18,7 +18,12 @@ import { callback } from "./middleware/callback";
 import { errorHandler } from "./middleware/errorHandler";
 import { token } from "./middleware/token";
 import { userinfo } from "./middleware/userinfo";
+import { HierarchyConfigJson } from "./types/hierarchyConfig";
 import { hasClaim } from "./utils/authUtils";
+import {
+  getHierarchyConfig,
+  saveHierarchyConfig,
+} from "./utils/hirarchyConfig";
 
 // --- Express App Setup ---
 const app = express();
@@ -58,16 +63,50 @@ app.get("/userinfo", userinfo);
 // --- Error Handling ---
 app.use(errorHandler);
 
+// --- Configure EJS ---
+app.set("view engine", "ejs");
+
 // --- Admin Endpoints ---
 app.get(
-  "/proxy-admin",
+  "/proxy-admin/config",
   requiresAuth(),
   hasClaim("roles", ["Admin"]),
-  (req, res) => {
-    res.status(200).json({
-      message: "Admin access granted",
-      user: req.oidc.user,
-    });
+  (async (req: Request, res: Response) => {
+    try {
+      const config = await getHierarchyConfig();
+      // Make sure config has the expected structure, provide default if needed
+      const safeConfig = config || { groups: [] };
+      res.render("index.ejs", { config: safeConfig }); // Pass config to the template
+    } catch (error) {
+      console.error("Error fetching config:", error);
+      res.status(500).render("index.ejs", {
+        config: { groups: [] }, // Render page even on error, maybe show error msg
+        error: "Could not load configuration.",
+      });
+    }
+  }) as RequestHandler
+);
+
+app.post(
+  "/proxy-admin/config",
+  requiresAuth(),
+  hasClaim("roles", ["Admin"]),
+  async (req: Request, res: Response) => {
+    try {
+      // With app.use(express.json()), req.body is already the parsed object
+      const config: HierarchyConfigJson = req.body;
+
+      // Optional: Add server-side validation here to double-check the structure/types
+
+      await saveHierarchyConfig(config);
+      res.status(200).send("Config saved successfully!");
+    } catch (error) {
+      console.error("Error saving config:", error);
+      // Send back a more informative error if possible
+      const message =
+        error instanceof Error ? error.message : "Unknown error saving config.";
+      res.status(500).send(`Error saving config: ${message}`);
+    }
   }
 );
 
