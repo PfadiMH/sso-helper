@@ -1,3 +1,5 @@
+import { HyrarchyLevel } from "./hierarchyConfig";
+
 export interface UpstreamUserinfoData {
   sub: string;
   first_name: string;
@@ -62,5 +64,3 @@ export type TranslatedUserinfoData = {
   roles: UpstreamRole[];
   hirarchy_level: HyrarchyLevel;
 };
-
-type HyrarchyLevel = "admin" | "leader" | "member" | "none";

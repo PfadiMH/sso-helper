@@ -1,3 +1,4 @@
+import { HyrarchyLevel } from "../types/hierarchyConfig";
 import {
   TranslatedUserinfoData,
   UpstreamRole,
@@ -6,18 +7,8 @@ import {
 import { calculateHierarchyLevel } from "./hierarchy";
 import { getHierarchyConfig } from "./hirarchyConfig";
 
-type HyrarchyLevel = "admin" | "leader" | "member" | "none";
-
 // --- Configuration JSON ---
 // This JSON should be defined in the environment variable CONFIGURATION_JSON
-export type GroupWithLevel = {
-  group_id: number;
-  roles: string[];
-  profile: HyrarchyLevel;
-};
-export type ConfigurationJson = {
-  groups: GroupWithLevel[];
-};
 
 export async function translateUserinfoData(
   userinfo: UpstreamUserinfoData

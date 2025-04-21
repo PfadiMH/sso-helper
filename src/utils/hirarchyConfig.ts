@@ -1,7 +1,7 @@
 import fs from "fs/promises";
-import { ConfigurationJson } from "./transaltor";
+import { HierarchyConfigJson } from "../types/hierarchyConfig";
 
-export async function getHierarchyConfig(): Promise<ConfigurationJson> {
+export async function getHierarchyConfig(): Promise<HierarchyConfigJson> {
   try {
     const data = await fs.readFile("../config/hierarchy_config.json", "utf-8");
     return JSON.parse(data);
