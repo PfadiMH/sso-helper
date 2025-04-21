@@ -1,27 +1,29 @@
-import { configuration } from "../config";
 import {
   TranslatedUserinfoData,
   UpstreamRole,
   UpstreamUserinfoData,
 } from "../types/userinfo";
 import { calculateHierarchyLevel } from "./hierarchy";
+import { getHierarchyConfig } from "./hirarchyConfig";
 
 type HyrarchyLevel = "admin" | "leader" | "member" | "none";
 
 // --- Configuration JSON ---
 // This JSON should be defined in the environment variable CONFIGURATION_JSON
-type GroupWithLevel = {
+export type GroupWithLevel = {
   group_id: number;
   roles: string[];
   profile: HyrarchyLevel;
 };
-type ConfigurationJson = {
+export type ConfigurationJson = {
   groups: GroupWithLevel[];
 };
 
-export function translateUserinfoData(
+export async function translateUserinfoData(
   userinfo: UpstreamUserinfoData
-): TranslatedUserinfoData {
+): Promise<TranslatedUserinfoData> {
+  const configuration = await getHierarchyConfig();
+
   // --- Translate Userinfo Data ---
   const roles: UpstreamRole[] = userinfo.roles;
 

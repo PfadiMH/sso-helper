@@ -1,23 +1,19 @@
 import fs from "fs/promises";
+import { ConfigurationJson } from "./transaltor";
 
-async function getHierarchyConfig() {
+export async function getHierarchyConfig(): Promise<ConfigurationJson> {
   try {
     const data = await fs.readFile("../config/hierarchy_config.json", "utf-8");
     return JSON.parse(data);
   } catch (error) {
-    // if file not found save an empty config
-    if (error.code === "ENOENT") {
-      const defaultConfig = {};
-      await saveHierarchyConfig(defaultConfig);
-      return defaultConfig;
-    }
-
-    console.error("Error reading hierarchy_config.json:", error);
-    return null;
+    // If the file doesn't exist or there's an error, create a default config
+    const defaultConfig = { groups: [] };
+    await saveHierarchyConfig(defaultConfig);
+    return defaultConfig;
   }
 }
 
-async function saveHierarchyConfig(config) {
+export async function saveHierarchyConfig(config) {
   try {
     await fs.writeFile(
       "../config/hierarchy_config.json",

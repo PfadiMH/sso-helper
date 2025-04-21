@@ -35,7 +35,9 @@ export const userinfo = async (req: Request, res: Response) => {
     );
 
     // -- Response Transformation --
-    const transformedUserinfo = translateUserinfoData(userinfoResponse.data);
+    const transformedUserinfo = await translateUserinfoData(
+      userinfoResponse.data
+    );
 
     res.status(userinfoResponse.status).json(transformedUserinfo);
   } catch (error: any) {
