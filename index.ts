@@ -7,10 +7,12 @@
 import axios from "axios";
 import cors from "cors";
 import express from "express";
+import { translateUserinfoData } from "./transaltor";
 
 // --- Configuration ---
 const authorizeBaseUrl = process.env.AUTHORIZE_BASE_URL;
 const tokenEndpointUrl = process.env.TOKEN_ENDPOINT_URL;
+const userinfoEndpointUrl = process.env.USERINFO_ENDPOINT_URL;
 const proxyRedirectUri = process.env.PROXY_REDIRECT_URI;
 const finalAppRedirectUrl = process.env.FINAL_APP_REDIRECT_URL;
 
@@ -20,6 +22,9 @@ if (!authorizeBaseUrl) {
 }
 if (!tokenEndpointUrl) {
   throw new Error("TOKEN_ENDPOINT_URL environment variable is not set.");
+}
+if (!userinfoEndpointUrl) {
+  throw new Error("USERINFO_ENDPOINT_URL environment variable is not set.");
 }
 if (!proxyRedirectUri) {
   throw new Error(
@@ -154,6 +159,54 @@ app.post("/token", async (req, res) => {
     res.status(500).json({
       error: "proxy_internal_error",
       error_description: `Failed to communicate with upstream token endpoint: ${error.message}`,
+    });
+  }
+});
+// --- /userinfo Endpoint ---
+app.get("/userinfo", async (req, res) => {
+  console.log(
+    `[${new Date().toISOString()}] Received GET /userinfo request from Keycloak:`,
+    req.query
+  );
+  const accessToken = req.headers["authorization"]?.split(" ")[1];
+  if (!accessToken) {
+    console.error(
+      `[${new Date().toISOString()}] Error: Missing access token in Authorization header.`
+    );
+    return res.status(401).json({
+      error: "invalid_token",
+      error_description: "Missing access token in Authorization header.",
+    });
+  }
+  try {
+    const userinfoResponse = await axios.get(userinfoEndpointUrl, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/json",
+      },
+      validateStatus: (status) => status >= 200 && status < 600,
+    });
+
+    console.log(
+      `[${new Date().toISOString()}] Received response from actual userinfo endpoint (Status: ${
+        userinfoResponse.status
+      }):`,
+      userinfoResponse.data
+    );
+
+    // -- Response Transformation --
+    const transformedUserinfo = translateUserinfoData(userinfoResponse.data);
+
+    res.status(userinfoResponse.status).json(transformedUserinfo);
+  } catch (error) {
+    console.error(
+      `[${new Date().toISOString()}] Error during userinfo proxy call to ${userinfoEndpointUrl}:`,
+      error.message,
+      error.stack
+    );
+    res.status(500).json({
+      error: "proxy_internal_error",
+      error_description: `Failed to communicate with upstream userinfo endpoint: ${error.message}`,
     });
   }
 });
