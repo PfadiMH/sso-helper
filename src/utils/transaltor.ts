@@ -26,7 +26,7 @@ export function translateUserinfoData(
   const roles: UpstreamRole[] = userinfo.roles;
 
   // 1. Extract the group IDs from the userinfo data
-  const groupIds = userinfo.roles.map((role) => role.group_id);
+  const groupIds = roles.map((role) => role.group_id);
 
   // 2. Find the matching groups from the configuration
   const matchingGroups = configuration.groups.filter((group) =>
@@ -56,7 +56,7 @@ export function translateUserinfoData(
     zip_code: userinfo.zip_code,
     town: userinfo.town,
     country: userinfo.country,
-    roles: userinfo.roles,
+    roles: roles,
     groups: groupIds,
     hirarchy_level: hierarchyLevel,
     birthday: userinfo.birthday,
