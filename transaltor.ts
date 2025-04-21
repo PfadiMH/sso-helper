@@ -63,6 +63,11 @@ type TranslatedUserinfoData = {
   hirarchy_level: HyrarchyLevel;
 };
 
+const configurationJson = process.env.CONFIGURATION_JSON;
+if (!configurationJson) {
+  throw new Error("Configuration JSON is not defined");
+}
+
 type HyrarchyLevel = "admin" | "leader" | "member" | "none";
 
 const hierarchyLevelMap: Record<HyrarchyLevel, number> = {
@@ -72,10 +77,6 @@ const hierarchyLevelMap: Record<HyrarchyLevel, number> = {
   none: 0,
 };
 
-const configurationJson = process.env.CONFIGURATION_JSON;
-if (!configurationJson) {
-  throw new Error("Configuration JSON is not defined");
-}
 // --- Configuration JSON ---
 // This JSON should be defined in the environment variable CONFIGURATION_JSON
 type GroupWithLevel = {
@@ -124,10 +125,7 @@ export function translateUserinfoData(
       hierarchyLevel = "none";
   }
 
-  // 4. Extract the group IDs from the matching groups
-  const groupIdsWithLevel = matchingGroups.map((group) => group.group_id);
-
-  // 5. Create the translated userinfo object
+  // 4. Create the translated userinfo object
   const translatedUserinfo: TranslatedUserinfoData = {
     sub: userinfo.sub,
     first_name: userinfo.first_name,
@@ -144,7 +142,7 @@ export function translateUserinfoData(
     town: userinfo.town,
     country: userinfo.country,
     roles: userinfo.roles,
-    groups: groupIdsWithLevel,
+    groups: groupIds,
     hirarchy_level: hierarchyLevel,
     birthday: userinfo.birthday,
     primary_group_id: userinfo.primary_group_id,
