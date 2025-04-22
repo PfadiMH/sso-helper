@@ -20,7 +20,7 @@ export async function getHierarchyConfig(): Promise<HierarchyConfigJson> {
           profile: "admin",
         },
       ],
-    };
+    } as HierarchyConfigJson;
     await saveHierarchyConfig(defaultConfig);
     return defaultConfig;
   }
