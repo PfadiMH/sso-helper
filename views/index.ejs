@@ -1,79 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Hierarchy Config</title>
+
+    <!-- ****** MAKE SURE THIS STYLE BLOCK IS HERE AND INTACT ****** -->
     <style>
-        body {
-            font-family: sans-serif;
-            margin: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        select {
-            width: 95%;
-            padding: 6px;
-        }
-
-        button {
-            padding: 8px 12px;
-            cursor: pointer;
-            margin-right: 5px;
-        }
-
-        .action-buttons {
-            white-space: nowrap;
-        }
-
-        #status {
-            margin-top: 15px;
-            font-weight: bold;
-        }
-
-        .status-success {
-            color: green;
-        }
-
-        .status-error {
-            color: red;
-        }
-
+        body { font-family: sans-serif; margin: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        input[type="text"], input[type="number"], select { width: 95%; padding: 6px; box-sizing: border-box; /* Add box-sizing */ }
+        button { padding: 8px 12px; cursor: pointer; margin-right: 5px; }
+        .action-buttons { white-space: nowrap; }
+        .action-bar { margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        #status { margin-top: 5px; font-weight: bold; width: 100%; /* Make status take full width */ }
+        .status-success { color: green; }
+        .status-error { color: red; }
+        .status-info { color: blue; }
         /* Style for the template row (initially hidden) */
-        #group-template {
-            display: none;
-        }
+        #group-template { display: none; }
+        .load-error { color: red; background-color: #ffe0e0; border: 1px solid red; padding: 10px; margin-bottom: 15px; }
     </style>
-</head>
+    <!-- ****** END OF STYLE BLOCK CHECK ****** -->
 
+</head>
 <body>
 
     <h1>Hierarchy Configuration</h1>
 
-    <div id="status"></div>
+    <!-- Display load error from backend if present -->
+    <% if (typeof error !== 'undefined' && error) { %>
+        <div class="load-error">
+            <strong>Error loading initial configuration:</strong> <%= error %>
+        </div>
+    <% } %>
+
+    <!-- Add a temporary debug output to SEE the config passed from backend -->
+    <!-- REMOVE THIS IN PRODUCTION -->
+    <!-- <pre style="background:#eee; padding: 10px; border: 1px dashed #ccc; white-space: pre-wrap; word-wrap: break-word;">
+        <strong>Debug - Config passed to EJS:</strong>
+        <%- JSON.stringify(config || { note: 'Config variable was null/undefined' }, null, 2) %>
+    </pre> -->
+     <!-- END OF DEBUG OUTPUT -->
+
 
     <form id="config-form">
         <table id="groups-table">
-            <thead>
+             <thead>
                 <tr>
                     <th>Group ID</th>
                     <th>Roles (comma-separated)</th>
@@ -82,42 +57,55 @@
                 </tr>
             </thead>
             <tbody id="groups-tbody">
-                <% if (config && config.groups) { %>
-                    <% config.groups.forEach((group, index)=> { %>
-                        <tr class="group-row">
-                            <td>
-                                <!-- Make Group ID read-only if it shouldn't be changed -->
-                                <input type="number" class="group-id" value="<%= group.group_id %>" required readonly>
-                                <!-- Or editable: -->
-                                <!-- <input type="number" class="group-id" value="<%= group.group_id %>" required> -->
-                            </td>
-                            <td>
-                                <input type="text" class="group-roles" value="<%= group.roles.join(', ') %>">
-                            </td>
-                            <td>
-                                <select class="group-profile">
-                                    <option value="admin" <%=group.profile==='admin' ? 'selected' : '' %>>Admin</option>
-                                    <option value="leader" <%=group.profile==='leader' ? 'selected' : '' %>>Leader
-                                    </option>
-                                    <option value="member" <%=group.profile==='member' ? 'selected' : '' %>>Member
-                                    </option>
-                                    <option value="none" <%=group.profile==='none' ? 'selected' : '' %>>None</option>
-                                </select>
-                            </td>
-                            <td class="action-buttons">
-                                <button type="button" class="remove-group-btn">Remove</button>
-                            </td>
-                        </tr>
-                        <% }); %>
-                            <% } %>
+                <!-- ****** THIS IS THE CRITICAL PART FOR INITIAL LOAD ****** -->
+                <!-- Check if config and config.groups exist and is an array -->
+                <% if (typeof config !== 'undefined' && config && Array.isArray(config.groups) && config.groups.length > 0) { %>
+                    <% config.groups.forEach((group, index) => { %>
+                        <%# Ensure 'group' is valid before trying to access properties %>
+                        <% if (group && typeof group === 'object') { %>
+                            <tr class="group-row">
+                                <td>
+                                    <%# Use 'readonly' if desired for existing items %>
+                                    <input type="number" class="group-id" value="<%= group.group_id ?? '' %>" required readonly>
+                                </td>
+                                <td>
+                                    <%# Ensure roles is an array before joining %>
+                                    <input type="text" class="group-roles" value="<%= Array.isArray(group.roles) ? group.roles.join(', ') : '' %>">
+                                </td>
+                                <td>
+                                    <select class="group-profile">
+                                        <%# Use default 'none' if profile is missing/invalid %>
+                                        <option value="admin" <%= group.profile === 'admin' ? 'selected' : '' %>>Admin</option>
+                                        <option value="leader" <%= group.profile === 'leader' ? 'selected' : '' %>>Leader</option>
+                                        <option value="member" <%= group.profile === 'member' ? 'selected' : '' %>>Member</option>
+                                        <option value="none" <%= (!group.profile || !['admin','leader','member'].includes(group.profile)) ? 'selected' : '' %>>None</option>
+                                    </select>
+                                </td>
+                                <td class="action-buttons">
+                                    <button type="button" class="remove-group-btn">Remove</button>
+                                </td>
+                            </tr>
+                        <% } else { %>
+                            <%# Optional: Render a row indicating bad data for this specific group %>
+                             <tr><td colspan="4" style="color:orange;">Skipped rendering invalid group data at index <%= index %>.</td></tr>
+                        <% } %>
+                    <% }); %>
+                <% } else { %>
+                    <%# Message shown if config.groups is empty or not available %>
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 20px;">
+                           No configuration groups found. Use 'Add Group' or 'Import' to create new ones.
+                        </td>
+                    </tr>
+                <% } %>
+                 <!-- ****** END OF INITIAL LOAD SECTION ****** -->
             </tbody>
         </table>
 
-        <!-- Template row for adding new groups -->
+        <!-- Template row for adding new groups (keep required removed here) -->
         <table style="display: none;">
             <tr id="group-template" class="group-row">
                 <td>
-                    <!-- REMOVED 'required' FROM THIS TEMPLATE INPUT -->
                     <input type="number" class="group-id" placeholder="Enter Group ID">
                 </td>
                 <td>
@@ -127,7 +115,7 @@
                     <select class="group-profile">
                         <option value="admin">Admin</option>
                         <option value="leader">Leader</option>
-                        <option value="member" selected>Member</option> <!-- Default new groups to member -->
+                        <option value="member" selected>Member</option>
                         <option value="none">None</option>
                     </select>
                 </td>
@@ -137,69 +125,57 @@
             </tr>
         </table>
 
-        <button type="button" id="add-group-btn">Add Group</button>
-        <button type="submit">Save Configuration</button>
+        <div class="action-bar">
+             <button type="button" id="add-group-btn">Add Group</button>
+             <button type="submit">Save Configuration</button>
+             <button type="button" id="export-clipboard-btn">Export to Clipboard</button>
+             <button type="button" id="import-clipboard-btn">Import from Clipboard</button>
+             <div id="status"></div>
+        </div>
     </form>
 
+    <!-- Ensure the script is at the end -->
     <script>
+        // --- ALL YOUR JAVASCRIPT FROM THE PREVIOUS STEP GOES HERE ---
+        // (Including const definitions, helper functions, event listeners)
+        // Make sure it's exactly as provided before, inside this <script> tag.
+
         const form = document.getElementById('config-form');
         const groupsTableBody = document.getElementById('groups-tbody');
         const addGroupButton = document.getElementById('add-group-btn');
+        const exportButton = document.getElementById('export-clipboard-btn');
+        const importButton = document.getElementById('import-clipboard-btn');
         const groupTemplate = document.getElementById('group-template');
         const statusDiv = document.getElementById('status');
 
-        // --- Event Listener for Adding Groups ---
-        addGroupButton.addEventListener('click', () => {
-            const newRow = groupTemplate.cloneNode(true);
-            newRow.removeAttribute('id'); // Remove the ID from the clone
-            // Make Group ID input editable for new rows if it was readonly in the template
-            const idInput = newRow.querySelector('.group-id');
-            if (idInput.hasAttribute('readonly')) {
-                idInput.removeAttribute('readonly');
-            }
-            groupsTableBody.appendChild(newRow);
-        });
-
-        // --- Event Listener for Removing Groups (using event delegation) ---
-        groupsTableBody.addEventListener('click', (event) => {
-            if (event.target.classList.contains('remove-group-btn')) {
-                const rowToRemove = event.target.closest('tr'); // Find the parent row
-                if (rowToRemove) {
-                    rowToRemove.remove();
-                }
-            }
-        });
-
-        // --- Event Listener for Form Submission ---
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Prevent default HTML form submission
-            statusDiv.textContent = 'Saving...';
-            statusDiv.className = ''; // Clear previous status styles
-
+        // --- Helper Function: Get Config Data from Table ---
+        function getConfigFromTable() {
             const groupRows = groupsTableBody.querySelectorAll('tr.group-row');
             const groupsData = [];
-            let isValid = true;
+            let firstErrorElement = null;
 
-            groupRows.forEach(row => {
+            for (const row of groupRows) {
                 const idInput = row.querySelector('.group-id');
                 const rolesInput = row.querySelector('.group-roles');
                 const profileSelect = row.querySelector('.group-profile');
+
+                [idInput, rolesInput, profileSelect].forEach(el => el.style.border = '');
 
                 const groupId = parseInt(idInput.value, 10);
                 const rolesString = rolesInput.value.trim();
                 const profile = profileSelect.value;
 
-                // Basic Validation
                 if (isNaN(groupId) || groupId <= 0) {
-                    alert(`Invalid Group ID in one of the rows: ${idInput.value}. Please enter a positive number.`);
-                    idInput.style.border = '1px solid red'; // Highlight error
-                    isValid = false;
-                    return; // Stop processing this row
-                } else {
-                    idInput.style.border = ''; // Clear error highlight
+                    idInput.style.border = '1px solid red';
+                    if (!firstErrorElement) firstErrorElement = idInput;
                 }
 
-                // Split roles, trim whitespace, filter out empty strings
+                const validProfiles = ['admin', 'leader', 'member', 'none'];
+                if (!validProfiles.includes(profile)) {
+                     profileSelect.style.border = '1px solid red';
+                     if (!firstErrorElement) firstErrorElement = profileSelect;
+                }
+
                 const roles = rolesString === '' ? [] : rolesString.split(',').map(role => role.trim()).filter(role => role.length > 0);
 
                 groupsData.push({
@@ -207,49 +183,221 @@
                     roles: roles,
                     profile: profile
                 });
-            });
-
-            if (!isValid) {
-                statusDiv.textContent = 'Please fix the errors before saving.';
-                statusDiv.className = 'status-error';
-                return; // Stop submission if validation failed
             }
 
-            const configPayload = {
-                groups: groupsData
-            };
+            if (firstErrorElement) {
+                firstErrorElement.focus();
+                throw new Error('Invalid data found in the table. Please fix the highlighted fields.');
+            }
 
+            const groupIds = groupsData.map(g => g.group_id);
+            const duplicateId = groupIds.find((id, index) => groupIds.indexOf(id) !== index);
+            if (duplicateId) {
+                 throw new Error(`Duplicate Group ID found: ${duplicateId}. Group IDs must be unique.`);
+            }
+
+            return { groups: groupsData };
+        }
+
+        // --- Helper Function: Update Status Message ---
+        function updateStatus(message, type = 'info') {
+             statusDiv.textContent = message;
+             statusDiv.className = `status-${type}`;
+        }
+
+         // --- Helper Function: Render Table from Config Data ---
+        function renderTable(configData) {
+            groupsTableBody.innerHTML = '';
+            if (!configData || !Array.isArray(configData.groups)) {
+                console.error("Invalid config data for rendering:", configData);
+                updateStatus("Invalid data structure for rendering table.", "error");
+                return;
+            }
+
+             if (configData.groups.length === 0) {
+                 groupsTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">Configuration empty.</td></tr>`;
+                 return;
+             }
+
+            configData.groups.forEach(group => {
+                const newRow = groupTemplate.cloneNode(true);
+                newRow.removeAttribute('id');
+                const idInput = newRow.querySelector('.group-id');
+                const rolesInput = newRow.querySelector('.group-roles');
+                const profileSelect = newRow.querySelector('.group-profile');
+
+                // IMPORTANT: Decide if imported rows should respect template's readonly status or always be editable?
+                // Option A: Make imported IDs editable (remove readonly if present)
+                idInput.removeAttribute('readonly');
+                idInput.setAttribute('required', 'required'); // Add required for imported/new rows if desired
+
+                 // Option B: Keep readonly status from template (if you made template ID readonly)
+                 // if (idInput.hasAttribute('readonly')) { /* keep it */ }
+
+
+                idInput.value = group.group_id ?? '';
+                rolesInput.value = Array.isArray(group.roles) ? group.roles.join(', ') : '';
+                profileSelect.value = group.profile ?? 'none';
+
+                groupsTableBody.appendChild(newRow);
+            });
+        }
+
+        // --- Event Listener for Adding Groups ---
+        addGroupButton.addEventListener('click', () => {
+            const newRow = groupTemplate.cloneNode(true);
+            newRow.removeAttribute('id');
+            const idInput = newRow.querySelector('.group-id');
+            idInput.removeAttribute('readonly'); // Ensure new rows have editable ID
+            idInput.setAttribute('required', 'required'); // Add required for new rows
+            groupsTableBody.appendChild(newRow);
+            // Clear the 'no groups found' message if it exists
+            const placeholderRow = groupsTableBody.querySelector('td[colspan="4"]');
+            if (placeholderRow) placeholderRow.closest('tr').remove();
+            updateStatus('New group row added. Fill in details and save.', 'info');
+        });
+
+        // --- Event Listener for Removing Groups ---
+        groupsTableBody.addEventListener('click', (event) => {
+            if (event.target.classList.contains('remove-group-btn')) {
+                const rowToRemove = event.target.closest('tr');
+                if (rowToRemove) {
+                    rowToRemove.remove();
+                     // Add back the placeholder if the table becomes empty
+                    if (groupsTableBody.querySelectorAll('tr.group-row').length === 0) {
+                         groupsTableBody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px;">No configuration groups found. Use 'Add Group' or 'Import' to create new ones.</td></tr>`;
+                    }
+                    updateStatus('Group row removed. Save changes to persist.', 'info');
+                }
+            }
+        });
+
+        // --- Event Listener for Form Submission (Save Config) ---
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            updateStatus('Saving...', 'info');
             try {
+                // Check if the placeholder row exists, means no real data to save
+                if (groupsTableBody.querySelector('td[colspan="4"]')) {
+                     configPayload = { groups: [] }; // Save an empty config
+                } else {
+                     configPayload = getConfigFromTable(); // Get data from actual rows
+                }
+
                 const response = await fetch('/proxy-admin/config', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json' // Important!
-                    },
-                    // Ensure your Express backend uses express.json() middleware
-                    // to parse this correctly into req.body
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(configPayload)
                 });
-
                 if (response.ok) {
                     const successMsg = await response.text();
-                    statusDiv.textContent = successMsg || 'Config saved successfully!';
-                    statusDiv.className = 'status-success';
-                    // Optional: Reload after a short delay to show fresh data
-                    // setTimeout(() => window.location.reload(), 1500);
+                    updateStatus(successMsg || 'Config saved successfully!', 'success');
                 } else {
                     const errorMsg = await response.text();
                     console.error('Save failed:', response.status, errorMsg);
-                    statusDiv.textContent = `Error saving config: ${errorMsg || response.statusText}`;
-                    statusDiv.className = 'status-error';
+                    updateStatus(`Error saving config: ${errorMsg || response.statusText}`, 'error');
                 }
             } catch (error) {
-                console.error('Network or other error:', error);
-                statusDiv.textContent = `Error saving config: ${error.message}`;
-                statusDiv.className = 'status-error';
+                console.error('Validation or network error:', error);
+                updateStatus(`${error.message || 'Error preparing or saving config.'}`, 'error');
             }
         });
+
+        // --- Event Listener for Export to Clipboard ---
+        exportButton.addEventListener('click', async () => {
+            updateStatus('Exporting...', 'info');
+            try {
+                 let configToExport;
+                 // Check if the placeholder row exists, means config is empty
+                 if (groupsTableBody.querySelector('td[colspan="4"]')) {
+                    configToExport = { groups: [] };
+                 } else {
+                    configToExport = getConfigFromTable(); // Get current config from table
+                 }
+                const jsonString = JSON.stringify(configToExport, null, 2);
+
+                await navigator.clipboard.writeText(jsonString);
+                updateStatus('Configuration copied to clipboard!', 'success');
+                const originalText = exportButton.textContent;
+                exportButton.textContent = 'Copied!';
+                setTimeout(() => { exportButton.textContent = originalText; }, 2000);
+
+            } catch (error) {
+                 console.error('Export error:', error);
+                if (error.name === 'NotAllowedError') {
+                     updateStatus('Clipboard access denied. Please grant permission.', 'error');
+                 } else {
+                    updateStatus(`Error exporting config: ${error.message}`, 'error');
+                 }
+            }
+        });
+
+        // --- Event Listener for Import from Clipboard ---
+        importButton.addEventListener('click', async () => {
+            updateStatus('Attempting to read clipboard...', 'info');
+            if (!navigator.clipboard || !navigator.clipboard.readText) {
+                updateStatus('Clipboard API not supported or permission denied.', 'error');
+                return;
+            }
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                if (!clipboardText) {
+                     updateStatus('Clipboard is empty.', 'info');
+                     return;
+                }
+                updateStatus('Parsing clipboard content...', 'info');
+                let importedConfig;
+                try {
+                    importedConfig = JSON.parse(clipboardText);
+                } catch (parseError) {
+                    console.error("JSON Parse Error:", parseError);
+                    throw new Error(`Invalid JSON in clipboard: ${parseError.message}`);
+                }
+
+                 if (typeof importedConfig !== 'object' || importedConfig === null) {
+                    throw new Error('Imported data is not a valid JSON object.');
+                }
+                 if (!Array.isArray(importedConfig.groups)) {
+                    throw new Error('Imported JSON must have a "groups" array.');
+                }
+                 const validProfiles = ['admin', 'leader', 'member', 'none'];
+                 for (let i = 0; i < importedConfig.groups.length; i++) {
+                    const group = importedConfig.groups[i];
+                     if (!group || typeof group !== 'object') throw new Error(`Invalid data structure for group ${i+1}.`);
+                     if (typeof group.group_id !== 'number' || group.group_id <= 0 || !Number.isInteger(group.group_id)) {
+                        throw new Error(`Invalid group_id in group ${i+1}: must be a positive integer.`);
+                    }
+                    if (!Array.isArray(group.roles) || !group.roles.every(r => typeof r === 'string')) {
+                         throw new Error(`Invalid roles in group ${i+1}: must be an array of strings.`);
+                    }
+                     if (!group.profile || !validProfiles.includes(group.profile)) {
+                        throw new Error(`Invalid or missing profile in group ${i+1}: must be one of ${validProfiles.join(', ')}.`);
+                    }
+                 }
+                 const importedIds = importedConfig.groups.map(g => g.group_id);
+                 if (new Set(importedIds).size !== importedIds.length) {
+                     throw new Error('Duplicate group_ids found in the imported data.');
+                 }
+
+                if (!confirm(`Import ${importedConfig.groups.length} groups from clipboard? This will replace the current configuration in the table.`)) {
+                    updateStatus('Import cancelled.', 'info');
+                    return;
+                }
+
+                renderTable(importedConfig); // Use the helper to render
+                updateStatus(`Successfully imported ${importedConfig.groups.length} groups from clipboard. Review and click 'Save Configuration' to persist.`, 'success');
+
+            } catch (error) {
+                console.error('Import error:', error);
+                 if (error.name === 'NotAllowedError') {
+                     updateStatus('Clipboard access denied. Please grant permission.', 'error');
+                 } else {
+                    updateStatus(`Error importing config: ${error.message}`, 'error');
+                 }
+            }
+        });
+
     </script>
 
 </body>
-
 </html>

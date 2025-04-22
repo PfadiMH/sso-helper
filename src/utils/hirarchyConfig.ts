@@ -3,7 +3,7 @@ import { HierarchyConfigJson } from "../types/hierarchyConfig";
 
 export async function getHierarchyConfig(): Promise<HierarchyConfigJson> {
   try {
-    const data = await fs.readFile("../config/hierarchy_config.json", "utf-8");
+    const data = await fs.readFile("./hierarchy_config.json", "utf-8");
     return JSON.parse(data);
   } catch (error) {
     // If the file doesn't exist or there's an error, create a default config
@@ -16,7 +16,7 @@ export async function getHierarchyConfig(): Promise<HierarchyConfigJson> {
 export async function saveHierarchyConfig(config) {
   try {
     await fs.writeFile(
-      "../config/hierarchy_config.json",
+      "./hierarchy_config.json",
       JSON.stringify(config, null, 2)
     );
   } catch (error) {
