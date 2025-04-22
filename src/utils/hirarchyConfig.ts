@@ -6,8 +6,21 @@ export async function getHierarchyConfig(): Promise<HierarchyConfigJson> {
     const data = await fs.readFile("./hierarchy_config.json", "utf-8");
     return JSON.parse(data);
   } catch (error) {
+    console.error("Error reading hierarchy_config.json:", error);
+    console.error("PLEASE CHECK IF THE FILE EXISTS AND IS VALID JSON.");
+    console.error(
+      "USERS WILL BE UNABLE TO LOGIN WITHOUT A VALID CONFIGURATION."
+    );
     // If the file doesn't exist or there's an error, create a default config
-    const defaultConfig = { groups: [] };
+    const defaultConfig = {
+      groups: [
+        {
+          group_id: 12460,
+          roles: ["Group::AbteilungsGremium::Leitung"],
+          profile: "admin",
+        },
+      ],
+    };
     await saveHierarchyConfig(defaultConfig);
     return defaultConfig;
   }
